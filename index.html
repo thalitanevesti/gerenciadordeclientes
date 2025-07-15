@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerenciador de Clientes Sergio Luiz Soluções Inteligentes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold text-gray-900 text-center mb-8">
+        Gerenciador de Clientes Sergio Luiz Soluções Inteligentes
+      </h1>
+
+      <!-- Seção para Adicionar/Editar Cliente -->
+      <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4" id="formTitle">
+          Adicionar Novo Cliente
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input
+            type="text"
+            id="name"
+            placeholder="Nome completo"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+          <input
+            type="email"
+            id="email"
+            placeholder="E-mail"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="tel"
+            id="phone"
+            placeholder="Telefone"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            id="address"
+            placeholder="Endereço"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            id="city"
+            placeholder="Cidade"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            id="state"
+            placeholder="Estado"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            id="zip"
+            placeholder="CEP"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            id="notes"
+            placeholder="Observações"
+            class="border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="file"
+            id="logoInput"
+            accept="image/*"
+            class="border rounded-lg p-3"
+          />
+          <div class="flex justify-end">
+            <button
+              onclick="previewLogo()"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Visualizar Logo
+            </button>
+          </div>
+        </div>
+        <div id="logoPreview" class="mt-2"></div>
+        <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Produtos</h3>
+        <div class="flex gap-4 mb-2">
+          <input
+            type="text"
+            id="productName"
+            placeholder="Nome do produto"
+            class="border rounded-lg p-3 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="number"
+            id="productPrice"
+            placeholder="Preço (R$)"
+            step="0.01"
+            class="border rounded-lg p-3 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onclick="addProductToForm()"
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Adicionar Produto
+          </button>
+        </div>
+        <ul id="productList" class="mt-2 list-disc pl-5"></ul>
+        <div class="flex gap-4 mt-4">
+          <button
+            onclick="addClient()"
+            id="submitButton"
+            class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+          >
+            Adicionar Cliente
+          </button>
+          <button
+            onclick="clearForm()"
+            id="cancelEditButton"
+            class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700"
+            style="display: none"
+          >
+            Cancelar Edição
+          </button>
+        </div>
+        <p id="errorMessage" class="text-sm mt-2"></p>
+      </div>
+
+      <!-- Seção para Listar e Selecionar Clientes -->
+      <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
+          Lista de Clientes
+        </h2>
+        <div class="flex gap-4 mb-4">
+          <select
+            id="clientList"
+            onchange="displayClientInfo()"
+            class="border rounded-lg p-3 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Selecione um cliente</option>
+          </select>
+          <button
+            onclick="editClient()"
+            class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700"
+          >
+            Editar Cliente
+          </button>
+          <button
+            onclick="deleteClient()"
+            class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700"
+          >
+            Excluir Cliente
+          </button>
+          <button
+            onclick="generatePDF()"
+            class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
+          >
+            Gerar PDF
+          </button>
+        </div>
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="border p-3 text-left">Nome</th>
+              <th class="border p-3 text-left">E-mail</th>
+              <th class="border p-3 text-left">Telefone</th>
+              <th class="border p-3 text-left">Cidade</th>
+            </tr>
+          </thead>
+          <tbody id="clientTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Seção para Exibir Informações do Cliente Selecionado -->
+      <div
+        class="bg-white shadow-lg rounded-lg p-6"
+        id="clientInfo"
+        style="display: none"
+      >
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
+          Informações do Cliente
+        </h2>
+        <p><strong>Nome:</strong> <span id="infoName"></span></p>
+        <p><strong>E-mail:</strong> <span id="infoEmail"></span></p>
+        <p><strong>Telefone:</strong> <span id="infoPhone"></span></p>
+        <p><strong>Endereço:</strong> <span id="infoAddress"></span></p>
+        <p><strong>Cidade:</strong> <span id="infoCity"></span></p>
+        <p><strong>Estado:</strong> <span id="infoState"></span></p>
+        <p><strong>CEP:</strong> <span id="infoZip"></span></p>
+        <p><strong>Observações:</strong> <span id="infoNotes"></span></p>
+        <p><strong>Logo:</strong></p>
+        <div id="infoLogo" class="mt-2"></div>
+        <p><strong>Produtos Comprados:</strong></p>
+        <ul id="infoProducts" class="list-disc pl-5"></ul>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>

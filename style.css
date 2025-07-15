@@ -1,0 +1,15 @@
+body {
+  background: linear-gradient(to bottom, #e0f2fe, #f0f9ff);
+}
+.error {
+  color: #dc2626;
+}
+.success {
+  color: #16a34a;
+}
+#logoPreview img,
+#infoLogo img {
+  max-width: 150px;
+  max-height: 150px;
+  object-fit: contain;
+}
