@@ -1,363 +1,353 @@
-// Lista temporária de produtos e logo no formulário
-let tempProducts = [];
-let tempLogo = null;
+let clients = JSON.parse(localStorage.getItem("clients")) || [];
+let currentClientProducts = [];
+let currentClientLogo = null;
 let editingClientId = null;
 
-// Inicializa a lista de clientes do localStorage ou array vazio
-let clients = JSON.parse(localStorage.getItem("clients")) || [];
+const messageDiv = document.getElementById("message");
+
+// Função para exibir mensagens (sucesso/erro)
+function showMessage(msg, type) {
+  messageDiv.textContent = msg;
+  messageDiv.className = `mb-4 p-3 rounded text-center ${type}`;
+  messageDiv.style.display = "block";
+  setTimeout(() => {
+    messageDiv.style.display = "none";
+  }, 3000);
+}
 
 // Função para salvar clientes no localStorage
 function saveClients() {
   localStorage.setItem("clients", JSON.stringify(clients));
 }
 
-// Função para visualizar o logo carregado
-function previewLogo() {
-  const logoInput = document.getElementById("logoInput");
-  const logoPreview = document.getElementById("logoPreview");
-  const error = document.getElementById("errorMessage");
-
-  if (logoInput.files && logoInput.files[0]) {
-    const file = logoInput.files[0];
-    if (!file.type.startsWith("image/")) {
-      error.textContent = "Por favor, selecione um arquivo de imagem";
-      error.classList.add("error");
-      return;
+// Função para carregar logo e pré-visualizar
+document
+  .getElementById("logoInput")
+  .addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        currentClientLogo = e.target.result;
+        const logoPreview = document.getElementById("logoPreview");
+        logoPreview.innerHTML = `<img src="${currentClientLogo}" alt="Logo Preview">`;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      currentClientLogo = null;
+      document.getElementById("logoPreview").innerHTML =
+        '<span class="text-gray-400 text-sm">Sem logo</span>';
     }
+  });
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      tempLogo = e.target.result;
-      logoPreview.innerHTML = `<img src="${tempLogo}" alt="Logo Preview">`;
-      error.textContent = "";
-    };
-    reader.readAsDataURL(file);
-  } else {
-    error.textContent = "Nenhum arquivo selecionado";
-    error.classList.add("error");
-  }
-}
-
-// Função para adicionar produto ao formulário
+// Função para adicionar produto à lista temporária do formulário
 function addProductToForm() {
-  const productName = document.getElementById("productName").value.trim();
-  const productPrice = parseFloat(
-    document.getElementById("productPrice").value
-  );
-  const error = document.getElementById("errorMessage");
+  const productNameInput = document.getElementById("productName");
+  const productValueInput = document.getElementById("productValue");
 
-  if (!productName || isNaN(productPrice) || productPrice <= 0) {
-    error.textContent = "Nome do produto e preço válido são obrigatórios";
-    error.classList.add("error");
+  const name = productNameInput.value.trim();
+  const value = parseFloat(productValueInput.value);
+
+  if (!name || isNaN(value) || value <= 0) {
+    showMessage(
+      "Por favor, insira um nome e um valor válido para o produto.",
+      "error"
+    );
     return;
   }
 
-  tempProducts.push({ name: productName, price: productPrice });
-  updateProductList();
-  document.getElementById("productName").value = "";
-  document.getElementById("productPrice").value = "";
-  error.textContent = "";
+  currentClientProducts.push({ name, value });
+  updateProductListDisplay();
+  productNameInput.value = "";
+  productValueInput.value = "";
 }
 
-// Função para atualizar a lista de produtos no formulário
-function updateProductList() {
-  const productList = document.getElementById("productList");
-  productList.innerHTML = "";
-  tempProducts.forEach((product) => {
+// Função para atualizar a exibição da lista de produtos no formulário
+function updateProductListDisplay() {
+  const productListDiv = document.getElementById("productList");
+  productListDiv.innerHTML = "";
+  if (currentClientProducts.length === 0) {
+    productListDiv.innerHTML =
+      '<li class="text-gray-500 text-sm">Nenhum produto adicionado.</li>';
+    return;
+  }
+  currentClientProducts.forEach((product, index) => {
     const li = document.createElement("li");
-    li.textContent = `${product.name} - R$ ${product.price.toFixed(2)}`;
-    productList.appendChild(li);
+    li.className =
+      "flex justify-between items-center py-1 border-b last:border-b-0";
+    li.innerHTML = `
+      <span>${product.name}: R$ ${product.value.toFixed(2)}</span>
+      <button onclick="removeProductFromForm(${index})" class="bg-red-500 text-white text-xs px-2 py-1 rounded hover:bg-red-600">Remover</button>
+    `;
+    productListDiv.appendChild(li);
   });
 }
 
-// Função para adicionar ou atualizar cliente
-function addClient() {
-  const name = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const address = document.getElementById("address").value.trim();
-  const city = document.getElementById("city").value.trim();
-  const state = document.getElementById("state").value.trim();
-  const zip = document.getElementById("zip").value.trim();
-  const notes = document.getElementById("notes").value.trim();
-  const error = document.getElementById("errorMessage");
+// Função para remover produto da lista temporária do formulário
+function removeProductFromForm(index) {
+  currentClientProducts.splice(index, 1);
+  updateProductListDisplay();
+}
 
-  // Validação básica
+// Função para adicionar ou atualizar cliente
+function addOrUpdateClient() {
+  const name = document.getElementById("clientName").value.trim();
+  const phone = document.getElementById("clientPhone").value.trim();
+  const email = document.getElementById("clientEmail").value.trim();
+  const address = document.getElementById("clientAddress").value.trim();
+
   if (!name) {
-    error.textContent = "O nome é obrigatório";
-    error.classList.add("error");
+    showMessage("O nome do cliente é obrigatório.", "error");
     return;
   }
 
-  // Cria objeto do cliente
-  const client = {
+  const clientData = {
     id: editingClientId || Date.now(),
     name,
-    email,
     phone,
+    email,
     address,
-    city,
-    state,
-    zip,
-    notes,
-    products: [...tempProducts],
-    logo: tempLogo,
+    logo: currentClientLogo,
+    products: [...currentClientProducts], // Copia para evitar referência
   };
 
   if (editingClientId) {
     // Atualiza cliente existente
-    const index = clients.findIndex((c) => c.id == editingClientId);
-    clients[index] = client;
-    error.textContent = "Cliente atualizado com sucesso!";
+    const index = clients.findIndex((c) => c.id === editingClientId);
+    if (index !== -1) {
+      clients[index] = clientData;
+      showMessage("Cliente atualizado com sucesso!", "success");
+    }
   } else {
     // Adiciona novo cliente
-    clients.push(client);
-    error.textContent = "Cliente adicionado com sucesso!";
+    clients.push(clientData);
+    showMessage("Cliente adicionado com sucesso!", "success");
   }
 
-  // Salva e atualiza
   saveClients();
-  updateClientList();
-  clearForm();
-
-  error.classList.remove("error");
-  error.classList.add("success");
-  setTimeout(() => {
-    error.textContent = "";
-    error.classList.remove("success");
-  }, 2000);
+  renderClientList();
+  clearClientForm();
 }
 
-// Função para limpar o formulário
-function clearForm() {
-  document.getElementById("name").value = "";
-  document.getElementById("email").value = "";
-  document.getElementById("phone").value = "";
-  document.getElementById("address").value = "";
-  document.getElementById("city").value = "";
-  document.getElementById("state").value = "";
-  document.getElementById("zip").value = "";
-  document.getElementById("notes").value = "";
-  document.getElementById("logoInput").value = "";
-  document.getElementById("logoPreview").innerHTML = "";
-  document.getElementById("productName").value = "";
-  document.getElementById("productPrice").value = "";
-  document.getElementById("productList").innerHTML = "";
-  document.getElementById("formTitle").textContent = "Adicionar Novo Cliente";
-  document.getElementById("submitButton").textContent = "Adicionar Cliente";
-  document.getElementById("cancelEditButton").style.display = "none";
-  tempProducts = [];
-  tempLogo = null;
+// Função para limpar o formulário do cliente
+function clearClientForm() {
+  document.getElementById("clientId").value = "";
+  document.getElementById("clientName").value = "";
+  document.getElementById("clientPhone").value = "";
+  document.getElementById("clientEmail").value = "";
+  document.getElementById("clientAddress").value = "";
+  document.getElementById("logoInput").value = ""; // Limpa o input de arquivo
+  document.getElementById("logoPreview").innerHTML =
+    '<span class="text-gray-400 text-sm">Sem logo</span>';
+
+  currentClientProducts = [];
+  currentClientLogo = null;
   editingClientId = null;
+
+  updateProductListDisplay();
+  document.getElementById("formTitle").textContent = "Adicionar Novo Cliente";
+  document.getElementById("saveClientButton").textContent = "Adicionar Cliente";
+  document.getElementById("cancelEditButton").classList.add("hidden");
 }
 
-// Função para atualizar a lista de clientes
-function updateClientList() {
-  const clientList = document.getElementById("clientList");
+// Função para renderizar a lista de clientes na tabela
+function renderClientList() {
   const clientTableBody = document.getElementById("clientTableBody");
-
-  // Limpa a lista e a tabela
-  clientList.innerHTML = '<option value="">Selecione um cliente</option>';
   clientTableBody.innerHTML = "";
 
-  // Popula a lista e a tabela
-  clients.forEach((client) => {
-    // Adiciona ao select
-    const option = document.createElement("option");
-    option.value = client.id;
-    option.textContent = client.name;
-    clientList.appendChild(option);
+  if (clients.length === 0) {
+    clientTableBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">Nenhum cliente cadastrado.</td></tr>`;
+    return;
+  }
 
-    // Adiciona à tabela
+  clients.forEach((client) => {
     const row = document.createElement("tr");
+    row.className = "hover:bg-gray-50";
     row.innerHTML = `
-            <td class="border p-3">${client.name}</td>
-            <td class="border p-3">${client.email || "-"}</td>
-            <td class="border p-3">${client.phone || "-"}</td>
-            <td class="border p-3">${client.city || "-"}</td>
-        `;
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${
+        client.name
+      }</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+        client.phone || "-"
+      }</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${
+        client.email || "-"
+      }</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+        <button onclick="editClient(${
+          client.id
+        })" class="text-blue-600 hover:text-blue-900 mr-3">Editar</button>
+        <button onclick="deleteClient(${
+          client.id
+        })" class="text-red-600 hover:text-red-900 mr-3">Excluir</button>
+        <button onclick="generatePDF(${
+          client.id
+        })" class="text-green-600 hover:text-green-900">Gerar PDF</button>
+      </td>
+    `;
     clientTableBody.appendChild(row);
   });
-
-  // Limpa a seção de informações do cliente
-  document.getElementById("clientInfo").style.display = "none";
 }
 
-// Função para exibir informações do cliente selecionado
-function displayClientInfo() {
-  const clientList = document.getElementById("clientList");
-  const clientId = clientList.value;
-  const clientInfo = document.getElementById("clientInfo");
-
-  if (!clientId) {
-    clientInfo.style.display = "none";
-    return;
-  }
-
-  const client = clients.find((c) => c.id == clientId);
+// Função para editar um cliente
+function editClient(id) {
+  const client = clients.find((c) => c.id === id);
   if (client) {
-    document.getElementById("infoName").textContent = client.name;
-    document.getElementById("infoEmail").textContent = client.email || "-";
-    document.getElementById("infoPhone").textContent = client.phone || "-";
-    document.getElementById("infoAddress").textContent = client.address || "-";
-    document.getElementById("infoCity").textContent = client.city || "-";
-    document.getElementById("infoState").textContent = client.state || "-";
-    document.getElementById("infoZip").textContent = client.zip || "-";
-    document.getElementById("infoNotes").textContent = client.notes || "-";
-
-    const infoProducts = document.getElementById("infoProducts");
-    infoProducts.innerHTML = "";
-    client.products.forEach((product) => {
-      const li = document.createElement("li");
-      li.textContent = `${product.name} - R$ ${product.price.toFixed(2)}`;
-      infoProducts.appendChild(li);
-    });
-
-    const infoLogo = document.getElementById("infoLogo");
-    infoLogo.innerHTML = client.logo
-      ? `<img src="${client.logo}" alt="Logo do Cliente">`
-      : "Nenhum logo carregado";
-
-    clientInfo.style.display = "block";
-  }
-}
-
-// Função para editar cliente
-function editClient() {
-  const clientList = document.getElementById("clientList");
-  const clientId = clientList.value;
-  const error = document.getElementById("errorMessage");
-
-  if (!clientId) {
-    error.textContent = "Selecione um cliente para editar";
-    error.classList.add("error");
-    return;
-  }
-
-  const client = clients.find((c) => c.id == clientId);
-  if (client) {
-    // Preenche o formulário com os dados do cliente
-    document.getElementById("name").value = client.name;
-    document.getElementById("email").value = client.email || "";
-    document.getElementById("phone").value = client.phone || "";
-    document.getElementById("address").value = client.address || "";
-    document.getElementById("city").value = client.city || "";
-    document.getElementById("state").value = client.state || "";
-    document.getElementById("zip").value = client.zip || "";
-    document.getElementById("notes").value = client.notes || "";
-    document.getElementById("logoPreview").innerHTML = client.logo
-      ? `<img src="${client.logo}" alt="Logo Preview">`
-      : "";
-    tempProducts = [...client.products];
-    tempLogo = client.logo;
     editingClientId = client.id;
-
-    // Atualiza o título e botão do formulário
     document.getElementById("formTitle").textContent = "Editar Cliente";
-    document.getElementById("submitButton").textContent = "Salvar Alterações";
-    document.getElementById("cancelEditButton").style.display = "inline-block";
-    updateProductList();
-    error.textContent = "";
+    document.getElementById("saveClientButton").textContent =
+      "Salvar Alterações";
+    document.getElementById("cancelEditButton").classList.remove("hidden");
+
+    document.getElementById("clientId").value = client.id;
+    document.getElementById("clientName").value = client.name;
+    document.getElementById("clientPhone").value = client.phone;
+    document.getElementById("clientEmail").value = client.email;
+    document.getElementById("clientAddress").value = client.address;
+
+    currentClientLogo = client.logo;
+    const logoPreview = document.getElementById("logoPreview");
+    if (client.logo) {
+      logoPreview.innerHTML = `<img src="${client.logo}" alt="Logo Preview">`;
+    } else {
+      logoPreview.innerHTML =
+        '<span class="text-gray-400 text-sm">Sem logo</span>';
+    }
+
+    currentClientProducts = [...client.products]; // Copia os produtos para edição
+    updateProductListDisplay();
+
+    // Rola para o topo do formulário para facilitar a edição
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
 
-// Função para excluir cliente
-function deleteClient() {
-  const clientList = document.getElementById("clientList");
-  const clientId = clientList.value;
-  const error = document.getElementById("errorMessage");
-
-  if (!clientId) {
-    error.textContent = "Selecione um cliente para excluir";
-    error.classList.add("error");
-    return;
-  }
-
+// Função para excluir um cliente
+function deleteClient(id) {
   if (confirm("Tem certeza que deseja excluir este cliente?")) {
-    clients = clients.filter((c) => c.id != clientId);
+    clients = clients.filter((client) => client.id !== id);
     saveClients();
-    updateClientList();
-    document.getElementById("clientInfo").style.display = "none";
-    error.textContent = "Cliente excluído com sucesso!";
-    error.classList.remove("error");
-    error.classList.add("success");
-    setTimeout(() => {
-      error.textContent = "";
-      error.classList.remove("success");
-    }, 2000);
+    renderClientList();
+    clearClientForm();
+    showMessage("Cliente excluído com sucesso!", "success");
   }
 }
 
-// Função para gerar PDF com as informações do cliente selecionado
-function generatePDF() {
-  const clientList = document.getElementById("clientList");
-  const clientId = clientList.value;
-
-  if (!clientId) {
-    alert("Selecione um cliente para gerar o PDF.");
+// Função para gerar PDF
+function generatePDF(clientId) {
+  const client = clients.find((c) => c.id === clientId);
+  if (!client) {
+    showMessage("Cliente não encontrado para gerar PDF.", "error");
     return;
   }
 
-  const client = clients.find((c) => c.id == clientId);
-  if (client) {
+  try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Adiciona logo, se disponível
-    let y = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let currentY = 20; // Posição Y inicial para o topo da página
+    const logoWidth = 50;
+    const logoHeight = 50;
+    const lineHeight = 8; // Espaçamento entre as linhas de texto
+
+    // Centralizar logo
+    const logoX = (pageWidth - logoWidth) / 2;
     if (client.logo) {
       try {
-        doc.addImage(client.logo, "PNG", 20, y, 50, 50); // Logo com 50x50 pixels
-        y += 60;
+        doc.addImage(
+          client.logo,
+          "PNG",
+          logoX,
+          currentY,
+          logoWidth,
+          logoHeight
+        );
       } catch (e) {
         console.error("Erro ao adicionar logo ao PDF:", e);
+        // Não impede a geração do PDF, apenas registra o erro do logo
       }
     }
+    currentY += logoHeight + 20; // Espaçamento após o logo
 
-    // Configurações do PDF
+    // Início das informações do cliente em formato de colunas
+    const labelX = 20; // Posição X para os rótulos
+    const valueX = 70; // Posição X para os valores (ajuste conforme necessário para alinhar)
+
     doc.setFontSize(16);
-    doc.text("Ficha do Cliente", 20, y);
-    y += 20;
+    doc.text("Ficha do Cliente", pageWidth / 2, currentY, { align: "center" });
+    currentY += 15; // Espaço após o título
+
     doc.setFontSize(12);
-    doc.text(`Nome: ${client.name}`, 20, y);
-    y += 10;
-    doc.text(`E-mail: ${client.email || "-"}`, 20, y);
-    y += 10;
-    doc.text(`Telefone: ${client.phone || "-"}`, 20, y);
-    y += 10;
-    doc.text(`Endereço: ${client.address || "-"}`, 20, y);
-    y += 10;
-    doc.text(`Cidade: ${client.city || "-"}`, 20, y);
-    y += 10;
-    doc.text(`Estado: ${client.state || "-"}`, 20, y);
-    y += 10;
-    doc.text(`CEP: ${client.zip || "-"}`, 20, y);
-    y += 10;
-    doc.text(`Observações: ${client.notes || "-"}`, 20, y);
-    y += 10;
-    doc.text("Produtos Comprados:", 20, y);
-    y += 10;
 
-    // Adiciona produtos
-    client.products.forEach((product) => {
-      doc.text(`${product.name}: R$ ${product.price.toFixed(2)}`, 20, y);
-      y += 10;
-    });
+    // Informações do Cliente
+    doc.text("Nome:", labelX, currentY);
+    doc.text(`${client.name}`, valueX, currentY);
+    currentY += lineHeight;
 
-    // Adiciona informações da empresa e data
+    doc.text("Telefone:", labelX, currentY);
+    doc.text(`${client.phone || "-"}`, valueX, currentY);
+    currentY += lineHeight;
+
+    doc.text("E-mail:", labelX, currentY);
+    doc.text(`${client.email || "-"}`, valueX, currentY);
+    currentY += lineHeight;
+
+    doc.text("Endereço:", labelX, currentY);
+    doc.text(`${client.address || "-"}`, valueX, currentY);
+    currentY += lineHeight + 5; // Espaço extra antes dos produtos
+
+    // Produtos
+    doc.text("Produtos:", labelX, currentY);
+    currentY += lineHeight;
+
+    let totalProductsValue = 0; // Inicializa o total
+    if (client.products && client.products.length > 0) {
+      client.products.forEach((product) => {
+        doc.text(`  ${product.name}:`, labelX + 5, currentY); // Recuado
+        doc.text(`R$ ${product.value.toFixed(2)}`, valueX, currentY);
+        currentY += lineHeight;
+        totalProductsValue += product.value; // Soma o valor do produto
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.text(
+        "Nenhum produto registrado para este cliente.",
+        valueX,
+        currentY
+      );
+      currentY += lineHeight;
+    }
+
+    // Exibir o total dos produtos
+    doc.setFontSize(12);
+    doc.text("Total dos Produtos:", labelX, currentY);
+    doc.text(`R$ ${totalProductsValue.toFixed(2)}`, valueX, currentY);
+    currentY += lineHeight + 10; // Espaço após o total
+
+    // Informações da Empresa no rodapé
     doc.setFontSize(10);
     doc.text(
       `Gerado por: Sergio Luiz Soluções Inteligentes | Data: ${new Date().toLocaleDateString(
         "pt-BR"
       )}`,
       20,
-      y + 10
+      doc.internal.pageSize.height - 15
     );
 
-    // Salva o PDF
     doc.save(`ficha_cliente_${client.name}.pdf`);
+    showMessage("PDF gerado com sucesso!", "success");
+  } catch (error) {
+    console.error("Erro geral na geração do PDF:", error);
+    showMessage(
+      "Ocorreu um erro ao gerar o PDF. Verifique o console do navegador para mais detalhes.",
+      "error"
+    );
   }
 }
 
 // Inicializa a lista de clientes ao carregar a página
-updateClientList();
+document.addEventListener("DOMContentLoaded", () => {
+  renderClientList();
+  updateProductListDisplay(); // Garante que a lista de produtos vazia seja exibida inicialmente
+});
